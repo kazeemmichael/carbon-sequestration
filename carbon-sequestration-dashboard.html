@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carbon Sequestration from Generator Exhaust — Project Dashboard</title>
+<meta name="description" content="A live look at an undergraduate engineering project capturing carbon and pollutants from generator exhaust." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --soot:#161310;
+    --char:#241d18;
+    --char-2:#2f2620;
+    --paper:#f4f1eb;
+    --paper-2:#ece7dd;
+    --ash:#a59c8d;
+    --ash-line:#d7d0c4;
+    --capture:#1f7a54;
+    --signal:#46c28a;
+    --alert:#d98a3d;
+    --ink:#1b1813;
+    --maxw:1120px;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    font-size:17px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:"Space Grotesk",sans-serif;font-weight:600;line-height:1.1;margin:0}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  a{color:var(--capture)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--alert);font-weight:500;margin-bottom:14px;
+  }
+  section{padding:84px 0}
+  .section-head{max-width:680px;margin-bottom:40px}
+  .section-head h2{font-size:clamp(1.8rem,3.4vw,2.6rem);letter-spacing:-.02em}
+  .section-head p{color:#5a5247;margin:16px 0 0}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(244,241,235,.86);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--ash-line);
+  }
+  .topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:"Space Grotesk";font-weight:600;font-size:1rem}
+  .brand .dot{width:13px;height:13px;border-radius:50%;background:var(--capture);box-shadow:0 0 0 4px rgba(31,122,84,.16)}
+  .navlinks{display:flex;gap:26px}
+  .navlinks a{font-size:.82rem;color:#5a5247;text-decoration:none;font-weight:500}
+  .navlinks a:hover{color:var(--capture)}
+  @media(max-width:760px){.navlinks{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(217,138,61,.10), transparent 60%),
+      radial-gradient(900px 600px at 105% 120%, rgba(31,122,84,.14), transparent 55%),
+      var(--soot);
+    color:var(--paper);
+    padding:70px 0 60px;
+  }
+  .status{
+    display:inline-flex;align-items:center;gap:9px;
+    font-family:"IBM Plex Mono";font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--signal);border:1px solid rgba(70,194,138,.34);border-radius:100px;padding:7px 14px;
+  }
+  .status .pulse{width:8px;height:8px;border-radius:50%;background:var(--signal);animation:pulse 1.8s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,194,138,.55)}70%{box-shadow:0 0 0 9px rgba(70,194,138,0)}100%{box-shadow:0 0 0 0 rgba(70,194,138,0)}}
+  .hero h1{font-size:clamp(2.3rem,5.6vw,4rem);letter-spacing:-.025em;margin:24px 0 0;max-width:15ch}
+  .hero .lede{color:#cfc7b9;font-size:1.18rem;max-width:54ch;margin:22px 0 0}
+  .meta{display:flex;flex-wrap:wrap;gap:28px;margin-top:34px}
+  .meta div{font-size:.86rem}
+  .meta .k{font-family:"IBM Plex Mono";color:var(--ash);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase}
+  .meta .v{color:var(--paper);font-weight:500;margin-top:3px}
+
+  /* ---------- pipeline signature ---------- */
+  .pipeline{margin-top:54px;border:1px solid rgba(255,255,255,.10);border-radius:var(--r);overflow:hidden;background:rgba(0,0,0,.22)}
+  .pipeline .ptop{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .pipeline .ptop span{font-family:"IBM Plex Mono";font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)}
+  .pipeline svg{display:block;width:100%;height:auto}
+  .stagecards{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(255,255,255,.08)}
+  .stagecards .sc{padding:18px 20px;border-right:1px solid rgba(255,255,255,.08)}
+  .stagecards .sc:last-child{border-right:none}
+  .stagecards .sc .num{font-family:"IBM Plex Mono";font-size:.7rem;color:var(--signal);letter-spacing:.1em}
+  .stagecards .sc h4{color:var(--paper);font-size:1rem;margin:6px 0 5px}
+  .stagecards .sc p{color:#b8b0a3;font-size:.82rem;margin:0;line-height:1.45}
+  @media(max-width:680px){.stagecards{grid-template-columns:1fr}.stagecards .sc{border-right:none;border-bottom:1px solid rgba(255,255,255,.08)}}
+
+  /* ---------- facts strip ---------- */
+  .facts{background:var(--char);color:var(--paper);padding:0}
+  .facts .grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  .facts .f{padding:34px 26px;border-right:1px solid rgba(255,255,255,.07)}
+  .facts .f:last-child{border-right:none}
+  .facts .f .big{font-family:"Space Grotesk";font-size:2rem;font-weight:600;letter-spacing:-.02em}
+  .facts .f .lab{color:var(--ash);font-size:.8rem;margin-top:6px}
+  @media(max-width:760px){.facts .grid{grid-template-columns:repeat(2,1fr)}.facts .f{border-bottom:1px solid rgba(255,255,255,.07)}.facts .f:nth-child(odd){border-right:1px solid rgba(255,255,255,.07)}.facts .f:nth-child(even){border-right:none}}
+
+  /* ---------- problem ---------- */
+  .twocol{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:start}
+  @media(max-width:840px){.twocol{grid-template-columns:1fr;gap:30px}}
+  .lead-p{font-size:1.12rem;color:#3c362d}
+  .lead-p + p{color:#5a5247;margin-top:18px}
+  .aimcard{background:var(--soot);color:var(--paper);border-radius:var(--r);padding:30px}
+  .aimcard .eyebrow{color:var(--signal)}
+  .aimcard p{color:#cfc7b9;margin:0;font-size:1.02rem}
+  .aimcard .quote{font-family:"Space Grotesk";font-size:1.25rem;color:var(--paper);line-height:1.32;margin:0 0 14px;letter-spacing:-.01em}
+
+  /* ---------- system / approaches ---------- */
+  .approaches{background:var(--paper-2)}
+  .appgrid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:840px){.appgrid{grid-template-columns:1fr}}
+  .app{background:#fff;border:1px solid var(--ash-line);border-radius:var(--r);padding:30px;position:relative}
+  .app.primary{border-color:var(--capture);box-shadow:0 0 0 1px var(--capture)}
+  .app .tag{font-family:"IBM Plex Mono";font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:100px;display:inline-block}
+  .app.primary .tag{background:rgba(31,122,84,.12);color:var(--capture)}
+  .app.explore .tag{background:rgba(217,138,61,.14);color:#a9651f}
+  .app h3{font-size:1.4rem;margin:16px 0 6px;letter-spacing:-.01em}
+  .app .sub{color:#5a5247;font-size:.92rem;margin:0 0 18px}
+  .chain{display:flex;flex-direction:column;gap:10px}
+  .chain .step{display:flex;align-items:center;gap:13px;background:var(--paper);border:1px solid var(--ash-line);border-radius:10px;padding:12px 14px}
+  .chain .step .i{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:var(--char);color:var(--signal);display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono";font-size:.82rem}
+  .chain .step .t{font-weight:600;font-size:.94rem}
+  .chain .step .d{color:#6b6356;font-size:.82rem;margin-top:1px}
+  .pending{color:#a9651f;font-size:.9rem;background:rgba(217,138,61,.10);border:1px dashed rgba(217,138,61,.5);border-radius:10px;padding:13px 15px;margin-top:6px}
+
+  /* ---------- testing ---------- */
+  .databanner{
+    display:flex;gap:12px;align-items:flex-start;
+    background:rgba(217,138,61,.10);border:1px solid rgba(217,138,61,.4);
+    border-radius:10px;padding:14px 16px;margin-bottom:28px;font-size:.88rem;color:#8a5417;
+  }
+  .databanner b{color:#7a4912}
+  .toggle{display:inline-flex;background:var(--paper-2);border:1px solid var(--ash-line);border-radius:100px;padding:4px;margin-bottom:26px}
+  .toggle button{border:none;background:none;font-family:"IBM Plex Mono";font-size:.78rem;letter-spacing:.06em;padding:9px 18px;border-radius:100px;cursor:pointer;color:#6b6356}
+  .toggle button.on{background:var(--soot);color:var(--paper)}
+  .chartcard{background:#fff;border:1px solid var(--ash-line);border-radius:var(--r);padding:26px 26px 18px}
+  .chartcard h3{font-size:1.15rem;margin-bottom:4px}
+  .chartcard .cap{color:#6b6356;font-size:.86rem;margin:0 0 18px}
+  .chartbox{height:360px}
+  .paramgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:24px}
+  .param{background:#fff;border:1px solid var(--ash-line);border-radius:12px;padding:16px}
+  .param .pname{font-family:"IBM Plex Mono";font-size:.72rem;letter-spacing:.08em;color:#6b6356;text-transform:uppercase}
+  .param .unit{color:var(--ash);font-weight:400}
+  .param .ba{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px}
+  .param .val{font-family:"IBM Plex Mono";font-size:.98rem}
+  .param .before{color:var(--alert)}
+  .param .after{color:var(--capture)}
+  .param .bartrack{height:7px;background:var(--paper-2);border-radius:6px;margin-top:13px;overflow:hidden}
+  .param .barfill{height:100%;background:linear-gradient(90deg,var(--capture),var(--signal));border-radius:6px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .param .red{font-size:.78rem;color:var(--capture);margin-top:8px;font-weight:600}
+  .nextcard{margin-top:24px;background:var(--soot);color:var(--paper);border-radius:var(--r);padding:28px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+  .nextcard .ico{font-size:2.2rem}
+  .nextcard h3{color:var(--paper);font-size:1.2rem}
+  .nextcard p{color:#cfc7b9;margin:6px 0 0;font-size:.94rem;max-width:60ch}
+  .nextcard .badge{font-family:"IBM Plex Mono";font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--signal);border:1px solid rgba(70,194,138,.4);border-radius:100px;padding:5px 12px}
+
+  /* ---------- roadmap ---------- */
+  .roadmap{background:var(--soot);color:var(--paper)}
+  .roadmap .section-head h2{color:var(--paper)}
+  .roadmap .section-head p{color:#b8b0a3}
+  .timeline{position:relative;margin-top:10px}
+  .timeline::before{content:"";position:absolute;left:13px;top:6px;bottom:6px;width:2px;background:rgba(255,255,255,.14)}
+  .tl{position:relative;padding:0 0 26px 44px}
+  .tl .node{position:absolute;left:5px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--soot);border:2px solid var(--ash)}
+  .tl.done .node{background:var(--capture);border-color:var(--signal)}
+  .tl.active .node{background:var(--alert);border-color:var(--alert);animation:pulse2 1.8s infinite}
+  @keyframes pulse2{0%{box-shadow:0 0 0 0 rgba(217,138,61,.5)}70%{box-shadow:0 0 0 8px rgba(217,138,61,0)}100%{box-shadow:0 0 0 0 rgba(217,138,61,0)}}
+  .tl .st{font-family:"IBM Plex Mono";font-size:.68rem;letter-spacing:.12em;text-transform:uppercase}
+  .tl.done .st{color:var(--signal)}
+  .tl.active .st{color:var(--alert)}
+  .tl.todo .st{color:var(--ash)}
+  .tl h4{color:var(--paper);font-size:1.05rem;margin:4px 0 4px}
+  .tl p{color:#b8b0a3;font-size:.9rem;margin:0}
+
+  /* ---------- references / footer ---------- */
+  .refs ol{padding-left:22px;margin:0;columns:2;column-gap:48px}
+  @media(max-width:760px){.refs ol{columns:1}}
+  .refs li{color:#3c362d;font-size:.9rem;margin-bottom:14px;break-inside:avoid;padding-left:6px}
+  footer{background:var(--char);color:#b8b0a3;padding:40px 0;font-size:.85rem}
+  footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  footer .brand{color:var(--paper)}
+  .updated{font-family:"IBM Plex Mono";font-size:.74rem;color:var(--ash)}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- top bar -->
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> Exhaust&nbsp;→&nbsp;Sink</div>
+    <nav class="navlinks">
+      <a href="#problem">The problem</a>
+      <a href="#system">The system</a>
+      <a href="#testing">Testing</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+  </div>
+</div>
+
+<!-- hero -->
+<header class="hero">
+  <div class="wrap">
+    <span class="status"><span class="pulse"></span> Active development · 2025/2026 session</span>
+    <h1>Pulling carbon and pollutants out of generator exhaust.</h1>
+    <p class="lede">An undergraduate engineering project capturing CO₂ and harmful emissions from small generators — passing the exhaust through a scrubber, biochar, and activated carbon before it ever reaches the air you breathe.</p>
+
+    <div class="meta">
+      <div><div class="k">Field</div><div class="v">Agricultural &amp; Environmental Engineering</div></div>
+      <div><div class="k">Institution</div><div class="v">University of Ibadan</div></div>
+      <div><div class="k">Focus</div><div class="v">Carbon sequestration</div></div>
+      <div><div class="k">Stage</div><div class="v">Prototype + preliminary testing</div></div>
+    </div>
+
+    <!-- SIGNATURE: the cleaning pipeline -->
+    <div class="pipeline" id="pipeline">
+      <div class="ptop">
+        <span>Approach 1 — Sequential Carbon Sequestration System</span>
+        <span>dirty&nbsp;→&nbsp;clean</span>
+      </div>
+      <svg viewBox="0 0 1000 220" role="img" aria-label="Diagram of exhaust passing through a scrubber, biochar, and activated carbon, getting progressively cleaner.">
+        <defs>
+          <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#d98a3d"/>
+            <stop offset="0.5" stop-color="#8a8f6a"/>
+            <stop offset="1" stop-color="#46c28a"/>
+          </linearGradient>
+        </defs>
+        <!-- duct -->
+        <rect x="0" y="92" width="1000" height="36" fill="url(#flow)" opacity="0.18"/>
+        <line x1="0" y1="92" x2="1000" y2="92" stroke="rgba(255,255,255,.12)"/>
+        <line x1="0" y1="128" x2="1000" y2="128" stroke="rgba(255,255,255,.12)"/>
+        <!-- source -->
+        <g>
+          <text x="14" y="64" fill="#d98a3d" font-family="IBM Plex Mono" font-size="13" letter-spacing="1">SOURCE</text>
+          <text x="14" y="170" fill="#b8b0a3" font-family="IBM Plex Sans" font-size="13">Generator exhaust</text>
+        </g>
+        <!-- stage markers -->
+        <g font-family="IBM Plex Mono" font-size="12" letter-spacing="1">
+          <line x1="280" y1="80" x2="280" y2="140" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>
+          <line x1="540" y1="80" x2="540" y2="140" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>
+          <line x1="800" y1="80" x2="800" y2="140" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>
+          <text x="300" y="64" fill="#cfc7b9">01 · Gas scrubber</text>
+          <text x="560" y="64" fill="#cfc7b9">02 · Biochar</text>
+          <text x="820" y="64" fill="#cfc7b9">03 · Activated carbon</text>
+        </g>
+        <text x="905" y="170" fill="#46c28a" font-family="IBM Plex Sans" font-size="13" text-anchor="end">Cleaner output ↗</text>
+        <!-- animated particles -->
+        <g id="particles"></g>
+      </svg>
+      <div class="stagecards">
+        <div class="sc"><div class="num">STAGE 01</div><h4>Gas scrubber</h4><p>Exhaust bubbles through a liquid medium; soluble gases and particulates wash out on contact.</p></div>
+        <div class="sc"><div class="num">STAGE 02</div><h4>Wood-derived biochar</h4><p>Porous char adsorbs remaining gases and fine particles as the stream passes through.</p></div>
+        <div class="sc"><div class="num">STAGE 03</div><h4>Activated carbon</h4><p>A final polishing bed traps trace contaminants before the air is released.</p></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- facts -->
+<div class="facts">
+  <div class="wrap" style="padding:0">
+    <div class="grid">
+      <div class="f"><div class="big">3</div><div class="lab">stage capture chain</div></div>
+      <div class="f"><div class="big">7</div><div class="lab">air-quality parameters measured</div></div>
+      <div class="f"><div class="big">2</div><div class="lab">design approaches in study</div></div>
+      <div class="f"><div class="big">4</div><div class="lab">papers reviewed for the design</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- problem -->
+<section id="problem">
+  <div class="wrap">
+    <div class="twocol">
+      <div>
+        <div class="eyebrow">The problem</div>
+        <h2 style="font-size:clamp(1.8rem,3.4vw,2.6rem);letter-spacing:-.02em;margin-bottom:18px">Millions of small generators run every day — and vent straight into the open air.</h2>
+        <p class="lead-p">Where the grid is unreliable, petrol and diesel generators fill the gap in homes, shops, and workshops. Each one is a small, uncontrolled smokestack releasing carbon dioxide alongside carbon monoxide, fine particulates, formaldehyde, and volatile organic compounds at street level.</p>
+        <p>This project asks a practical question: can a compact, low-cost add-on capture a meaningful share of those emissions at the point they leave the exhaust — before they reach the people standing next to the machine?</p>
+      </div>
+      <aside class="aimcard">
+        <div class="eyebrow">Aim</div>
+        <p class="quote">Capture and sequester carbon and associated pollutants from generator exhaust using a sequential treatment system.</p>
+        <p>The work pairs a working bench prototype with field measurements, so every design decision is checked against real readings rather than theory alone.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- system -->
+<section id="system" class="approaches">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The system</div>
+      <h2>Two paths to the same goal</h2>
+      <p>The approved design treats the exhaust in sequence. A second approach is under study, exploring a single absorption stage with a chosen sink material.</p>
+    </div>
+    <div class="appgrid">
+      <div class="app primary">
+        <span class="tag">Approach 1 · approved · in development</span>
+        <h3>Sequential Carbon Sequestration System</h3>
+        <p class="sub">Exhaust is cleaned in three stages, each removing what the previous one left behind.</p>
+        <div class="chain">
+          <div class="step"><div class="i">01</div><div><div class="t">Gas scrubber</div><div class="d">Liquid wash strips soluble gases and particulates</div></div></div>
+          <div class="step"><div class="i">02</div><div><div class="t">Wood-derived biochar</div><div class="d">Porous char adsorbs remaining contaminants</div></div></div>
+          <div class="step"><div class="i">03</div><div><div class="t">Activated carbon</div><div class="d">Final polishing bed for trace pollutants</div></div></div>
+        </div>
+      </div>
+      <div class="app explore">
+        <span class="tag">Approach 2 · under exploration</span>
+        <h3>Single-stage absorption sink</h3>
+        <p class="sub">A focused design routing exhaust through one absorption chamber holding a selected sink material.</p>
+        <div class="chain">
+          <div class="step"><div class="i">01</div><div><div class="t">Inlet conditioning</div><div class="d">Exhaust prepared for the absorption stage</div></div></div>
+          <div class="step"><div class="i">02</div><div><div class="t">Absorption chamber (“sink”)</div><div class="d">Sink material captures the target compounds</div></div></div>
+        </div>
+        <div class="pending">⏳ Sink material to be confirmed with the supervisor before this approach advances.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- testing -->
+<section id="testing">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Testing &amp; results</div>
+      <h2>Does the scrubber actually clean the air?</h2>
+      <p>A preliminary test compared exhaust readings with and without a water-based gas washer, across two sources. Results are reported as mean ± standard error.</p>
+    </div>
+
+    <div class="databanner">
+      <span>⚠️</span>
+      <div><b>These figures are sample data for layout.</b> They show realistic shapes, not measured results. Replace the values in the <span class="mono">DATA</span> block of this file with your readings and the charts update automatically.</div>
+    </div>
+
+    <div class="toggle" role="tablist" aria-label="Emission source">
+      <button class="on" data-src="generator" role="tab">Generator</button>
+      <button data-src="tricycle" role="tab">Parked tricycle</button>
+    </div>
+
+    <div class="chartcard">
+      <h3>Reduction with the water washer</h3>
+      <p class="cap" id="chartCap">How much each pollutant dropped once the gas washer was added — generator source.</p>
+      <div class="chartbox"><canvas id="redChart"></canvas></div>
+    </div>
+
+    <div class="paramgrid" id="paramGrid"></div>
+
+    <div class="nextcard">
+      <div class="ico">🐟</div>
+      <div style="flex:1;min-width:240px">
+        <span class="badge">Next test · planned</span>
+        <h3>Fish pond water vs distilled water</h3>
+        <p>The next preliminary run swaps the scrubbing liquid for fish pond water — chosen for its ammonia content — to test whether it captures more than a plain distilled-water baseline. Results will be added here once collected.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- roadmap -->
+<section id="roadmap" class="roadmap">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Roadmap</div>
+      <h2>Where the project stands</h2>
+      <p>A running log of what is done, what is in progress, and what comes next.</p>
+    </div>
+    <div class="timeline">
+      <div class="tl done"><div class="node"></div><div class="st">Done</div><h4>Project proposals — both approaches</h4><p>Drafted and formatted to specification; Approach 1 approved for development.</p></div>
+      <div class="tl done"><div class="node"></div><div class="st">Done</div><h4>Journal review of four key papers</h4><p>Biochar, activated carbon, and CO₂ capture literature compiled and approved.</p></div>
+      <div class="tl done"><div class="node"></div><div class="st">Done</div><h4>CAD design &amp; process flow diagram</h4><p>Component specifications and a full process flow for the sequential system.</p></div>
+      <div class="tl done"><div class="node"></div><div class="st">Done</div><h4>Preliminary air-quality test</h4><p>Generator and tricycle exhaust measured with and without the water washer; report approved.</p></div>
+      <div class="tl active"><div class="node"></div><div class="st">In progress</div><h4>Fish pond water test</h4><p>Designing the run, collecting data, and comparing against the distilled-water baseline.</p></div>
+      <div class="tl todo"><div class="node"></div><div class="st">Upcoming</div><h4>Approach 1 system build-out</h4><p>Continued development of the full sequential prototype.</p></div>
+      <div class="tl todo"><div class="node"></div><div class="st">Upcoming</div><h4>Approach 2 — confirm sink material</h4><p>Awaiting the supervisor's decision on the absorption sink before advancing.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- references -->
+<section class="refs">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Foundations</div>
+      <h2>Key references</h2>
+      <p>The literature underpinning the material choices and capture design.</p>
+    </div>
+    <ol>
+      <li>Guo et al. (2022). Study informing biochar and carbon capture material selection.</li>
+      <li>Zhang et al. (2023). Work on adsorption performance for CO₂ capture.</li>
+      <li>Maniarasu et al. (2024). Review supporting the activated carbon and scrubbing design.</li>
+      <li>Gupta et al. (2022). Reference on carbon sequestration approaches.</li>
+    </ol>
+    <p style="color:#8a8276;font-size:.84rem;margin-top:8px">Full citations are kept in the project's reviewed journal document.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="display:flex;align-items:center;gap:11px"><span class="dot" style="width:13px;height:13px;border-radius:50%;background:var(--capture);display:inline-block"></span> Carbon Sequestration from Generator Exhaust</div>
+    <div class="updated">Undergraduate project · University of Ibadan · last updated <span id="upd"></span></div>
+  </div>
+</footer>
+
+<script>
+  /* =======================================================================
+     DATA  — edit these numbers with your real readings (mean ± standard error)
+     Each parameter: before = without washer, after = with washer
+     ======================================================================= */
+  const DATA = {
+    generator: {
+      label: "generator source",
+      params: [
+        { name:"CO₂",    unit:"ppm",    before:{m:1800, se:45}, after:{m:1450, se:38} },
+        { name:"CO",     unit:"ppm",    before:{m:95,   se:6 },  after:{m:78,   se:5 } },
+        { name:"PM2.5",  unit:"µg/m³",  before:{m:320,  se:12},  after:{m:145,  se:9 } },
+        { name:"PM1.0",  unit:"µg/m³",  before:{m:210,  se:9 },  after:{m:98,   se:7 } },
+        { name:"PM10",   unit:"µg/m³",  before:{m:480,  se:18},  after:{m:205,  se:11} },
+        { name:"HCHO",   unit:"mg/m³",  before:{m:0.42, se:0.03},after:{m:0.21, se:0.02} },
+        { name:"TVOC",   unit:"mg/m³",  before:{m:3.8,  se:0.20},after:{m:2.1,  se:0.15} }
+      ]
+    },
+    tricycle: {
+      label: "parked tricycle source",
+      params: [
+        { name:"CO₂",    unit:"ppm",    before:{m:1200, se:30}, after:{m:980,  se:28} },
+        { name:"CO",     unit:"ppm",    before:{m:140,  se:8 },  after:{m:120,  se:7 } },
+        { name:"PM2.5",  unit:"µg/m³",  before:{m:180,  se:8 },  after:{m:90,   se:6 } },
+        { name:"PM1.0",  unit:"µg/m³",  before:{m:120,  se:6 },  after:{m:60,   se:5 } },
+        { name:"PM10",   unit:"µg/m³",  before:{m:260,  se:10},  after:{m:130,  se:8 } },
+        { name:"HCHO",   unit:"mg/m³",  before:{m:0.30, se:0.02},after:{m:0.16, se:0.02} },
+        { name:"TVOC",   unit:"mg/m³",  before:{m:2.9,  se:0.18},after:{m:1.7,  se:0.12} }
+      ]
+    }
+  };
+
+  /* ---------- helpers ---------- */
+  const fmt = (v) => Math.abs(v) >= 10 ? Math.round(v) : (Math.abs(v) >= 1 ? v.toFixed(1) : v.toFixed(2));
+  const reduction = (p) => Math.max(0, (p.before.m - p.after.m) / p.before.m * 100);
+
+  /* ---------- chart ---------- */
+  let chart;
+  function drawChart(src){
+    const d = DATA[src];
+    const labels = d.params.map(p=>p.name);
+    const reds = d.params.map(p=> +reduction(p).toFixed(1));
+    const ctx = document.getElementById("redChart");
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type:"bar",
+      data:{ labels, datasets:[{
+        label:"% reduction with washer",
+        data:reds,
+        backgroundColor:"rgba(31,122,84,.85)",
+        hoverBackgroundColor:"#46c28a",
+        borderRadius:6, maxBarThickness:54
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            callbacks:{
+              label:(c)=>{
+                const p = d.params[c.dataIndex];
+                return [` ${c.parsed.y.toFixed(1)}% reduction`,
+                        ` before: ${fmt(p.before.m)} ± ${fmt(p.before.se)} ${p.unit}`,
+                        ` after:  ${fmt(p.after.m)} ± ${fmt(p.after.se)} ${p.unit}`];
+              }
+            }
+          }
+        },
+        scales:{
+          y:{ beginAtZero:true, max:100, ticks:{callback:v=>v+"%", color:"#6b6356"}, grid:{color:"#ece7dd"}, title:{display:true,text:"Reduction (%)",color:"#6b6356"} },
+          x:{ ticks:{color:"#3c362d",font:{family:"IBM Plex Mono"}}, grid:{display:false} }
+        }
+      }
+    });
+  }
+
+  /* ---------- parameter cards ---------- */
+  function drawParams(src){
+    const d = DATA[src];
+    const grid = document.getElementById("paramGrid");
+    grid.innerHTML = d.params.map(p=>{
+      const r = reduction(p);
+      return `<div class="param">
+        <div class="pname">${p.name} <span class="unit">${p.unit}</span></div>
+        <div class="ba">
+          <span class="val before">${fmt(p.before.m)} ± ${fmt(p.before.se)}</span>
+          <span class="val after">→ ${fmt(p.after.m)} ± ${fmt(p.after.se)}</span>
+        </div>
+        <div class="bartrack"><div class="barfill" style="width:0%" data-w="${r.toFixed(0)}"></div></div>
+        <div class="red">▼ ${r.toFixed(0)}% lower with washer</div>
+      </div>`;
+    }).join("");
+    requestAnimationFrame(()=>{
+      grid.querySelectorAll(".barfill").forEach(b=> b.style.width = b.dataset.w + "%");
+    });
+  }
+
+  function render(src){
+    drawChart(src);
+    drawParams(src);
+    document.getElementById("chartCap").textContent =
+      "How much each pollutant dropped once the gas washer was added — " + DATA[src].label + ".";
+  }
+
+  /* ---------- toggle ---------- */
+  document.querySelectorAll(".toggle button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".toggle button").forEach(b=>b.classList.remove("on"));
+      btn.classList.add("on");
+      render(btn.dataset.src);
+    });
+  });
+
+  /* ---------- pipeline particles ---------- */
+  (function particles(){
+    if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const g = document.getElementById("particles");
+    if(!g) return;
+    const N = 26;
+    for(let i=0;i<N;i++){
+      const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      const y = 96 + Math.random()*28;
+      const dur = 4 + Math.random()*3;
+      const delay = -Math.random()*dur;
+      c.setAttribute("cy", y.toFixed(1));
+      c.setAttribute("r", (1.4 + Math.random()*2.2).toFixed(1));
+      c.setAttribute("fill", "#fff");
+      const anim = document.createElementNS("http://www.w3.org/2000/svg","animate");
+      anim.setAttribute("attributeName","cx");
+      anim.setAttribute("from","20"); anim.setAttribute("to","960");
+      anim.setAttribute("dur", dur+"s"); anim.setAttribute("begin", delay+"s");
+      anim.setAttribute("repeatCount","indefinite");
+      const op = document.createElementNS("http://www.w3.org/2000/svg","animate");
+      op.setAttribute("attributeName","opacity");
+      op.setAttribute("values","0.9;0.7;0.25;0.05");
+      op.setAttribute("keyTimes","0;0.4;0.75;1");
+      op.setAttribute("dur", dur+"s"); op.setAttribute("begin", delay+"s");
+      op.setAttribute("repeatCount","indefinite");
+      const rr = document.createElementNS("http://www.w3.org/2000/svg","animate");
+      rr.setAttribute("attributeName","r");
+      rr.setAttribute("values","2.6;2.0;1.0;0.4");
+      rr.setAttribute("dur", dur+"s"); rr.setAttribute("begin", delay+"s");
+      rr.setAttribute("repeatCount","indefinite");
+      c.appendChild(anim); c.appendChild(op); c.appendChild(rr);
+      g.appendChild(c);
+    }
+  })();
+
+  /* ---------- init ---------- */
+  document.getElementById("upd").textContent =
+    new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+  render("generator");
+</script>
+</body>
+</html>
